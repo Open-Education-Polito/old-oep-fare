@@ -1,0 +1,345 @@
+<?php
+
+/**
+ * @file
+ * Documentation for the whole fare.module file.
+ *
+ * In this file there are the following functions:
+ * - fare_permission: to set the levels of permission for the module
+ * - fare_menu: defines the menu entries
+ * - fare_theme: call the function to theme the module
+ * - get_info: get the info from the cmis_repository
+ * - build_query: builds the query
+ * - fare_download: function called by the parallel function for download.
+ */
+
+/**
+ * FARE module permissions.
+ */
+function fare_permission() {
+  $perms = array(
+    'administer fare' => array(
+      'title' => 'Amministra FARE',
+      'description' => 'Assumi il controllo totale sul modulo',
+    ),
+    'auth fare' => array(
+      'title' => 'Autenticato su FARE: utente autenticato',
+      'description' => 'Accedi alle componenti del modulo solo per utenti autenticati',
+    ),
+    'access fare' => array(
+      'title' => 'Accedi a FARE: utente anonimo non autenticato',
+      'description' => 'Accedi alle componenti del modulo',
+    ),
+  );
+
+  return $perms;
+}
+
+/**
+ * FARE menu entries.
+ */
+function fare_menu() {
+  $items = array();
+
+  /* 1- Query page Registration */
+  /*	Calling fare_query_form inside fare.query.inc */
+  $items['fare/query'] = array(
+    'type' => MENU_NORMAL_ITEM,
+    'title' => 'FARE - The Free Architecture for Remote Education',
+    'title_display' => 'invisible',
+    'description' => 'Pagina per la query',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fare_query_form'),
+    'access arguments' => array('access fare'),
+    'access callback' => 'user_access',
+    'file' => 'fare.query.inc',
+    'file path' => drupal_get_path('module', 'fare'),
+  );
+
+  /* 2 - Results Page Registration */
+  /* 	Calling _fare_query_page on fare.risultati.inc */
+  $items['fare/risultati'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Risultati',
+    'page callback' => 'fare_query_page',
+    'access arguments' => array('access fare'),
+    'access callback' => 'user_access',
+    'file' => 'fare.risultati.inc',
+    'file path' => drupal_get_path('module', 'fare'),
+  );
+
+  /* 3 - Results Elaborationn Page Registration */
+  /* Call elabora_page in fare.elabora.inc */
+  $items['fare/elabora'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Crea il tuo libro',
+    'page callback' => 'elabora_page',
+    'access arguments' => array('access fare'),
+    'access callback' => 'user_access',
+    'file' => 'fare.elabora.inc',
+    'file path' => drupal_get_path('module', 'fare'),
+  );
+
+  /* 4 - Book Creation Page Registration*/
+  /* Calling drupal_get_form inside fare.visualizza.inc */
+  $items['fare/visualizza'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Crea il tuo libro',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('fare_manage'),
+    'access arguments' => array('access fare'),
+    'access callback' => 'user_access',
+    'file' => 'fare.visualizza.inc',
+    'file path' => drupal_get_path('module', 'fare'),
+  );
+
+  /* 6 - Referee Page Registration */
+  /* Call fare_referee inside fare.referee.inc */
+  $items['fare/referee'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'Gestione dei file da revisionare',
+    'page callback' => 'fare_referee',
+    'access arguments' => array('administer fare'),
+    'access callback' => 'user_access',
+    'file' => 'fare.referee.inc',
+    'file path' => drupal_get_path('module', 'fare'),
+  );
+
+  // AJAX Callback to show description.
+  $items['fare/visualizza/fare_link_callback/nojs/%/%'] = array(
+    'page callback' => 'anteprima_ajax_completa',
+    // D starts count from 0 so nojs is 3 and % is 4!
+    'page arguments' => array(3, 4, 5),
+    'access arguments' => array('access fare'),
+    'access callback' => 'user_access',
+    'type' => MENU_CALLBACK,
+  );
+
+  // AJAX Callback page.
+  $items['fare/visualizza/fare_link_callback/ajax/%/%'] = array(
+    'delivery callback' => 'ajax_deliver',
+  ) + $items['fare/visualizza/fare_link_callback/nojs/%/%'];
+
+  return $items;
+}
+
+/**
+ * Function fare_theme called to style the module.
+ *
+ * @param string $existing
+ *    Parameter.
+ * @param string $type
+ *    Parameter.
+ * @param string $theme
+ *    Parameter.
+ * @param string $path
+ *    Parameter.
+ *
+ * @return array
+ *    Return render element.
+ */
+function fare_theme($existing, $type, $theme, $path) {
+  return array(
+    'fare_manage' => array(
+      'render element' => 'form',
+    ),
+  );
+}
+
+/**
+ * Function to get info from the connected repository.
+ *
+ * @return repo_info
+ *   It returns the connected repository ID.
+ */
+function get_repository_info() {
+  module_load_include('api.inc', 'cmis');
+
+  try {
+
+    // API call to get the Info.
+    $repository = cmisapi_getRepositoryInfo();
+    $repo_id = !empty($repository->repositoryId) ? $repository->repositoryId : 'default';
+
+    // Get info about main and draft folder from settings.
+    $repo_info_array = variable_get('cmis_repositories', array());
+
+    // Array for storing the repository info.
+    $repo_info = array(
+      'repo_id' => $repo_id,
+      'browser_default_folder_objectId' => $repo_info_array[$repo_id]['browser_default_folder_objectId'],
+      'draft_folder_id' => $repo_info_array[$repo_id]['draft_folder_id'],
+    );
+
+    return $repo_info;
+  }
+  catch (CMISException $e) {
+    fare_error_handler('get_repository_info', $e->getMessage(), TRUE);
+    return FALSE;
+  }
+}
+
+/**
+ * Function to explicit the query on the connected repository.
+ *
+ * @return null|array
+ *   Returns a list of objects
+ */
+function run_query(array $repo_info, $query) {
+  module_load_include('api.inc', 'cmis');
+
+  if ($query) {
+    $query_result = "";
+    try {
+      $query_result = cmisapi_query($repo_info['repo_id'], $query);
+    }
+    catch (CMISException $e) {
+      fare_error_handler("fare_run_query", $e->getMessage(), FALSE);
+      return -1;
+    }
+  }
+  else {
+    $error_message = "Error during the query preparation. Passed query is null.";
+    fare_error_handler("fare_run_query", $error_message, FALSE);
+    return -1;
+  }
+
+  if (!isset($query_result->objectList)) {
+    $message = "Query result objectList is not defined.";
+    fare_notice_handler($message, FALSE);
+    return -1;
+  }
+  elseif (empty($query_result->objectList)) {
+    $message = "Query result objectList is empty.";
+    fare_notice_handler($message, FALSE);
+    // Returning "EMPTY" to notify that the request has no results.
+    return "EMPTY";
+  }
+  else {
+    return $query_result->objectList;
+  }
+}
+
+/**
+ * Function build_query to build the query.
+ *
+ * @param array $query_parameters
+ *    Array containing the information needed to build the query.
+ *
+ * @return null|string
+ *    Return a string with the query or NULL in case something happens.
+ *   TODO refactor this function, especially the last part of Materia and Class.
+ */
+function build_query(array $repo_info, array $query_parameters) {
+  if (isset($query_parameters)) {
+    // List of arguments to retry.
+    $query_args_array = array(
+      "fr:titolo",
+      "fr:autore",
+      "fr:argomento",
+      "fr:sottoargomento",
+      "fr:classe",
+      "fr:campo",
+      "cmis:name",
+      "cmis:contentStreamMimeType",
+      "cmis:description",
+      "cmis:objectId",
+      "cmis:objectTypeId",
+    );
+    // Common values for the queries.
+    $query_args_string = implode(', ', $query_args_array);
+    $query_args_from = 'fr:learningobject L';
+    $query_args_intree = "IN_TREE('" . $repo_info['browser_default_folder_objectId'] . "')";
+    // Switch on type of query to run.
+    switch ($query_parameters['Tipo']) {
+      case 'testuale':
+        $query_args_where = sprintf("CONTAINS(L, '~fr:titolo:\'*%s*\'' )", $query_parameters['Query']);
+        // Build query.
+        $query = sprintf("SELECT %s FROM %s  WHERE %s AND %s", $query_args_string, $query_args_from, $query_args_where, $query_args_intree);
+        // Adding tag - has to be "IN_TREE".
+        $add_tag = sprintf(" OR ( L.fr:tags LIKE '%%%s%%' AND %s)", $query_parameters['Query'], $query_args_intree);
+        // Adding topic -  has to be "IN_TREE".
+        $add_argomento = sprintf(" OR ( L.fr:argomento LIKE '%%%s%%' AND %s)", $query_parameters['Query'], $query_args_intree);
+        // Adding author - has to be "IN_TREE".
+        $add_autore = sprintf(" OR ( L.fr:autore LIKE '%%%s%%' AND %s)", $query_parameters['Query'], $query_args_intree);
+        // Composing final query.
+        $query .= ($add_tag . $add_argomento . $add_autore);
+        break;
+
+      case 'ricerca_altra':
+        // Subject.
+        if (!empty($query_parameters['Materia'])) {
+          // WHERE D.fr:argomento LIKE '%%%s%%'", $query_parameters['Materia'].
+          $query_args_subject = sprintf("L.fr:argomento LIKE '%%%s%%'", $query_parameters['Materia']);
+          $query = sprintf("SELECT %s FROM %s  WHERE  %s AND %s", $query_args_string, $query_args_from, $query_args_subject, $query_args_intree);
+        }
+
+        // School Class.
+        if (!empty($query_parameters['Classe'])) {
+          $query_args_class = sprintf("L.fr:classe LIKE '%%%s%%'", $query_parameters['Classe']);
+          // TODO: fix this.
+          if ((strrpos($query_parameters['Classe'], "utte")) == FALSE) {
+            if (!empty($query_parameters['Materia'])) {
+              // Adding School Class to previous query.
+              if (isset($query)) {
+                $query .= (' AND ' . $query_args_class);
+              }
+            }
+            else {
+              // Query on School Class.
+              $query = sprintf("SELECT %s FROM %s WHERE %s  AND %s", $query_args_string, $query_args_from, $query_args_class, $query_args_intree);
+            }
+          }
+          // No else, just exit.
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    // Return the query.
+    if (isset($query)) {
+      return $query;
+    }
+    else {
+      return NULL;
+    }
+  }
+  // If $query_parameters is not set, return NULL!
+  else {
+    return NULL;
+  }
+}
+
+/**
+ * Utility for handling FARE errors.
+ *
+ * @param string $type
+ *   Function name raising the error.
+ * @param string $e
+ *   Exception.
+ * @param string $notify
+ *   Boolean, if yes the error is shown to the user, elsewhise it is logged.
+ */
+function fare_error_handler($type, $e, $notify = FALSE) {
+  watchdog($type, $e, NULL, WATCHDOG_ERROR);
+  if ($notify === TRUE) {
+    drupal_set_message(t("Al momento questa funzionalità non è disponibile. Ci scusiamo per l'inconveniente."), 'error');
+  }
+}
+
+/**
+ * Utility for handling FARE notices.
+ *
+ * @param string $message
+ *    Exception to catch.
+ * @param string $notify
+ *   Boolean, if yes the error is shown to the user, elsewhise it is logged.
+ */
+function fare_notice_handler($message, $notify = FALSE) {
+  watchdog('fare', $message, NULL, WATCHDOG_NOTICE);
+  if ($notify === TRUE) {
+    drupal_set_message($message);
+  }
+}

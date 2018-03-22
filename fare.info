@@ -1,0 +1,9 @@
+name = FARE
+description = FARE module
+
+package = FARE
+core = "7.x"
+project="fare"
+version = 0.2.1
+
+dependencies[] = cmis
