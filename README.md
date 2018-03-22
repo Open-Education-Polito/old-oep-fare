@@ -8,10 +8,15 @@ Each functionality is developed in a separate module in order to be easily
 tested and deployed. 
 
 ## How To 
-Check the dependencies if you install manually. 
-If using `drush` it should clear the Drupal dependencies.
+This is a Drupal 7.x module. As such, it requires a working installation of
+Drupal. For development purposes, I suggest using the
+[drupal-vm](https://github.com/geerlingguy/drupal-vm) project. 
+Once the dev env is setup it is necessary to fix the dependencies.
+If you are using `drush` it should clear the Drupal dependencies reading from
+the `info` file.
 However, some dependencies have to be installed locally by means of composer,
 see the `composer.json` file. 
+There is a dedicated repo for the theming of the module.
 
 ## Licensing
 This code is licensed under a GNU Affero General Public License, v3.
