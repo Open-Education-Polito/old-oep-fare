@@ -18,4 +18,4 @@ This code is licensed under a GNU Affero General Public License, v3.
 
 ## Author
 Copyright (C) 2014-2018 libremente  
-`<surf> AT <libremente> DOT eu
+`<surf> AT <libremente> DOT eu`
