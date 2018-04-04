@@ -26,9 +26,8 @@
  * - fare_permission: to set the levels of permission for the module
  * - fare_menu: defines the menu entries
  * - fare_theme: call the function to theme the module
- * - get_info: get the info from the cmis_repository
+ * - get_repository_info: get the info from the cmis_repository
  * - build_query: builds the query
- * - fare_download: function called by the parallel function for download.
  */
 
 /**
