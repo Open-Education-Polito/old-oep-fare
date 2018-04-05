@@ -74,11 +74,11 @@ function fare_menu() {
   );
 
   /* 2 - Results Page Registration */
-  /* 	Calling _fare_query_page on fare.risultati.inc */
+  /* 	Calling fare_risultati page in fare.risultati.inc */
   $items['fare/risultati'] = array(
     'type' => MENU_CALLBACK,
     'title' => 'Risultati',
-    'page callback' => 'fare_query_page',
+    'page callback' => 'fare_risultati',
     'access arguments' => array('access fare'),
     'access callback' => 'user_access',
     'file' => 'fare.risultati.inc',
@@ -173,7 +173,6 @@ function get_repository_info() {
   module_load_include('api.inc', 'cmis');
 
   try {
-
     // API call to get the Info.
     $repository = cmisapi_getRepositoryInfo();
     $repo_id = !empty($repository->repositoryId) ? $repository->repositoryId : 'default';
@@ -269,7 +268,7 @@ function build_query(array $repo_info, array $query_parameters) {
     $query_args_intree = "IN_TREE('" . $repo_info['browser_default_folder_objectId'] . "')";
     // Switch on type of query to run.
     switch ($query_parameters['Tipo']) {
-      case 'testuale':
+      case 'TEXT':
         $query_args_where = sprintf("CONTAINS(L, '~fr:titolo:\'*%s*\'' )", $query_parameters['Query']);
         // Build query.
         $query = sprintf("SELECT %s FROM %s  WHERE %s AND %s", $query_args_string, $query_args_from, $query_args_where, $query_args_intree);
@@ -283,7 +282,7 @@ function build_query(array $repo_info, array $query_parameters) {
         $query .= ($add_tag . $add_argomento . $add_autore);
         break;
 
-      case 'ricerca_altra':
+      case 'ADVANCED':
         // Subject.
         if (!empty($query_parameters['Materia'])) {
           // WHERE D.fr:argomento LIKE '%%%s%%'", $query_parameters['Materia'].
