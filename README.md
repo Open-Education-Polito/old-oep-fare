@@ -1,7 +1,7 @@
 # Notice
 --- This repo is a WIP, meaning that several components will be added
 regularly and, right now, it does **not** represent a working installation. 
-The newest versione of the platform is under development and will be published
+The newest version of the platform is under development and will be published
 soon. ---
 
 # FARE - The Free Architecture for Remote Education
