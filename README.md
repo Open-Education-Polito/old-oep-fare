@@ -1,3 +1,7 @@
+# Notice
+This repository contains the prototype version of the platform. The new version
+is under development and will be published soon. 
+
 # FARE - The Free Architecture for Remote Education
 This is the main codebase for FARE. 
 FARE is an e-learning web platform which stands in between a basic search
