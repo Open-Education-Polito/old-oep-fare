@@ -1,6 +1,8 @@
 # Notice
-This repository contains the prototype version of the platform. The new version
-is under development and will be published soon. 
+--- This repo is a WIP, meaning that several components will be added
+regularly and, right now, it does **not** represent a working installation. 
+The newest versione of the platform is under development and will be published
+soon. ---
 
 # FARE - The Free Architecture for Remote Education
 This is the main codebase for FARE. 
@@ -11,10 +13,6 @@ located worldwide. Thanks to the integration with several other external modules
 it can provide a novel learning experience. 
 
 ## What
-
---- This repo is a WIP, meaning that the several components will be added
-regularly and, right now, it does **not** represent a working installation. If
-you need a full working installation, contact me (see below contact info). ---
 
 This repository contains a Drupal module, called FARE, which is a composition
 of tools and functionalities for remote education. 
