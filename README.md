@@ -1,8 +1,5 @@
-# Notice
---- This repo is a WIP, meaning that several components will be added
-regularly and, right now, it does **not** represent a working installation. 
-The newest version of the platform is under development and will be published
-soon. ---
+# Deprecation Notice
+> --- :warning: This is the old repository of FARE. :warning: ---
 
 # FARE - The Free Architecture for Remote Education
 This is the main codebase for FARE. 
